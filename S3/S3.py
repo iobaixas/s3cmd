@@ -151,6 +151,9 @@ class S3(object):
 
     ## Maximum attempts of re-issuing failed requests
     _max_retries = 5
+    
+    _last_chunk_sz = None
+    _last_chunk_ts = None
 
     def __init__(self, config):
         self.config = config
@@ -655,9 +658,20 @@ class S3(object):
         md5_hash = md5()
         try:
             while (size_left > 0):
+                
+                # Insert a pause in the sending process if max_kbps is defined
+                # and not enough time has passed since last chunk.
+                if self.config.max_kbps and self._last_chunk_sz:
+                    min_elapsed = float(self._last_chunk_sz) / (1024 * self.config.max_kbps / 8)
+                    wait = min_elapsed - (time.time() - self._last_chunk_ts);
+                    if wait > 0.001: time.sleep(wait)
+                
                 #debug("SendFile: Reading up to %d bytes from '%s'" % (self.config.send_chunk, file.name))
-                data = file.read(min(self.config.send_chunk, size_left))
+                self._last_chunk_ts = time.time()
+                self._last_chunk_sz = min(self.config.send_chunk, size_left)
+                data = file.read(self._last_chunk_sz)
                 md5_hash.update(data)
+                
                 conn.send(data)
                 if self.config.progress_meter:
                     progress.update(delta_position = len(data))

@@ -65,6 +65,7 @@ class Config(object):
     mime_type = ""
     enable_multipart = True
     multipart_chunk_size_mb = 15    # MB
+    max_kbps = 25 * 8 # Maximun bandwidth allocation (kbps)
     # List of checks to be performed for 'sync'
     sync_checks = ['size', 'md5']   # 'weak-timestamp'
     # List of compiled REGEXPs
